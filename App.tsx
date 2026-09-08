@@ -1,6 +1,7 @@
 import { StatusBar } from 'expo-status-bar';
 import {
   ActivityIndicator,
+  Alert,
   StyleSheet,
   Text,
   View,
@@ -50,7 +51,7 @@ export default function App() {
       <View style={styles.cameraContainer}>
         <StatusBar style="light" />
 
-        <Image source={{ uri: photo }} style={StyleSheet.absoluteFill} />
+        <Image source={{ uri: photo }} style={styles.absoluteFill} />
 
         <View style={styles.previewTop}>
           <Text style={styles.logo}>MeeNyo</Text>
@@ -65,7 +66,27 @@ export default function App() {
             <Text style={styles.retakeText}>↩ ပြန်ရိုက်မည်</Text>
           </Pressable>
 
-          <Pressable style={styles.post}>
+          <Pressable
+            style={styles.post}
+            onPress={() => {
+              Alert.alert(
+                'MeeNyo',
+                'Shot Story တင်မည်လား?',
+                [
+                  {
+                    text: 'မတင်သေး',
+                    style: 'cancel',
+                  },
+                  {
+                    text: 'တင်မည်',
+                    onPress: () => {
+                      Alert.alert('MeeNyo', 'Shot Story တင်ပြီးပါပြီ။');
+                    },
+                  },
+                ]
+              );
+            }}
+          >
             <Text style={styles.postText}>Shot Story တင်မည်</Text>
           </Pressable>
         </View>
@@ -93,7 +114,7 @@ export default function App() {
 
       <CameraView
         ref={cameraRef}
-        style={StyleSheet.absoluteFill}
+        style={styles.absoluteFill}
         facing={facing}
         mode="picture"
       />
@@ -148,8 +169,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a2e',
   },
 
+  absoluteFill: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+
   overlay: {
-    ...StyleSheet.absoluteFill,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.18)',
   },
 
