@@ -1,20 +1,20 @@
 import { StatusBar } from 'expo-status-bar';
-import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
-  View,
-  Pressable,
-  Image,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-} from 'react-native';
+import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+
+const COLORS = { black: '#090707', surface: '#17100F', surface2: '#241514', red: '#D92D20', redDeep: '#8E160F', gold: '#FFC928', goldSoft: '#FFE38A', white: '#FFF8ED', muted: '#D7C8B8', line: '#4B2820' };
+const splashLogo = require('./assets/image/splash-logo.jpg');
+const profilePicture = require('./assets/image/profile-picture.png');
+const appIcon = require('./assets/image/app-icon.png');
+const posts = [
+  { id: '1', image: profilePicture, user: 'Ko Aung', handle: '@koaung', title: '#Golden Challenge', subtitle: 'Dance to the Beat', likes: '18.2K', comments: '1.9K' },
+  { id: '2', image: splashLogo, user: 'MeeNyo', handle: '@meenyo', title: '#MyanmarLife', subtitle: 'ချစ်စရာအချိန်လေး', likes: '9.4K', comments: '642' },
+];
 
 export default function App() {
+  const [splash, setSplash] = useState(true);
+  const [screen, setScreen] = useState<'home' | 'challenges' | 'profile' | 'camera'>('home');
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<'back' | 'front'>('back');
   const [photo, setPhoto] = useState<string | null>(null);
@@ -23,219 +23,72 @@ export default function App() {
   const [published, setPublished] = useState(false);
   const cameraRef = useRef<CameraView>(null);
 
-  if (!permission) {
-    return (
-      <View style={styles.container}>
-        <StatusBar style="light" />
-        <Text style={styles.logo}>MeeNyo</Text>
-        <Text style={styles.mm}>မီးညို</Text>
-        <ActivityIndicator color="#f9a826" size="large" style={styles.loader} />
-        <Text style={styles.tagline}>Camera ကို စတင်ပြင်ဆင်နေသည်…</Text>
-      </View>
-    );
-  }
+  useEffect(() => { const timer = setTimeout(() => setSplash(false), 1500); return () => clearTimeout(timer); }, []);
+  if (splash) return <Splash />;
+  if (screen === 'camera') return <CameraFlow permission={permission} requestPermission={requestPermission} facing={facing} setFacing={setFacing} photo={photo} setPhoto={setPhoto} storyMode={storyMode} setStoryMode={setStoryMode} storyText={storyText} setStoryText={setStoryText} published={published} setPublished={setPublished} cameraRef={cameraRef} onClose={() => { setPhoto(null); setStoryMode(false); setPublished(false); setStoryText(''); setScreen('home'); }} />;
 
-  if (!permission.granted) {
-    return (
-      <View style={styles.container}>
-        <StatusBar style="light" />
-        <Text style={styles.logo}>MeeNyo</Text>
-        <Text style={styles.mm}>မီးညို</Text>
-        <Text style={styles.tagline}>ချစ်စရာကမ္ဘာလေးထဲက ကိုယ်ပိုင်အချိန်</Text>
-        <Pressable style={styles.button} onPress={requestPermission}>
-          <Text style={styles.buttonText}>📷 Camera ဖွင့်မည်</Text>
-        </Pressable>
-      </View>
-    );
-  }
+  return <SafeAreaView style={styles.app}>
+    <StatusBar style="light" />
+    {screen === 'home' && <HomeScreen onCreate={() => setScreen('camera')} onChallenges={() => setScreen('challenges')} />}
+    {screen === 'challenges' && <ChallengesScreen onCreate={() => setScreen('camera')} />}
+    {screen === 'profile' && <ProfileScreen onCreate={() => setScreen('camera')} />}
+    <BottomNav active={screen} onHome={() => setScreen('home')} onChallenges={() => setScreen('challenges')} onCreate={() => setScreen('camera')} onProfile={() => setScreen('profile')} />
+  </SafeAreaView>;
+}
 
-  if (published && photo) {
-    return (
-      <View style={styles.cameraContainer}>
-        <StatusBar style="light" />
-        <Image source={{ uri: photo }} style={styles.absoluteFill} />
-        <View style={styles.publishedOverlay}>
-          <View style={styles.successCard}>
-            <Text style={styles.successIcon}>✓</Text>
-            <Text style={styles.successTitle}>Story တင်ပြီးပါပြီ</Text>
-            <Text style={styles.successText}>သင့်ရဲ့ Short Story ကို MeeNyo မှာ သိမ်းထားပါပြီ။</Text>
-            <Pressable
-              style={styles.button}
-              onPress={() => {
-                setPublished(false);
-                setStoryMode(false);
-                setStoryText('');
-                setPhoto(null);
-              }}
-            >
-              <Text style={styles.buttonText}>Camera ပြန်ဖွင့်မည်</Text>
-            </Pressable>
-          </View>
-        </View>
-      </View>
-    );
-  }
+function Splash() {
+  return <View style={styles.splash}><StatusBar style="light" /><Image source={splashLogo} style={styles.splashImage} /><View style={styles.splashShade} /><View style={styles.splashContent}><Image source={appIcon} style={styles.splashIcon} /><Text style={styles.splashBrand}>MeeNyo</Text><Text style={styles.splashMyanmar}>မီးညို</Text><Text style={styles.splashTagline}>ချစ်စရာကမ္ဘာလေးထဲက ကိုယ်ပိုင်အချိန်</Text><ActivityIndicator color={COLORS.gold} size="small" style={{ marginTop: 28 }} /></View></View>;
+}
 
-  if (storyMode && photo) {
-    return (
-      <KeyboardAvoidingView
-        style={styles.editorContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <StatusBar style="light" />
-        <ScrollView contentContainerStyle={styles.editorContent} keyboardShouldPersistTaps="handled">
-          <View style={styles.editorHeader}>
-            <Pressable onPress={() => setStoryMode(false)} style={styles.headerButton}>
-              <Text style={styles.headerButtonText}>‹ ပြန်</Text>
-            </Pressable>
-            <Text style={styles.editorTitle}>Short Story</Text>
-            <View style={styles.headerSpacer} />
-          </View>
+function HomeScreen({ onCreate, onChallenges }: { onCreate: () => void; onChallenges: () => void }) {
+  return <ScrollView style={styles.content} contentContainerStyle={styles.contentBottom} showsVerticalScrollIndicator={false}>
+    <View style={styles.header}><View style={styles.brandRow}><Image source={appIcon} style={styles.headerIcon} /><View><Text style={styles.brand}>MeeNyo</Text><Text style={styles.brandMm}>မီးညို</Text></View></View><Text style={styles.search}>⌕</Text></View>
+    <View style={styles.tabs}><Text style={[styles.tab, styles.tabActive]}>For You</Text><Text style={styles.tab}>Following</Text><Pressable onPress={onChallenges}><Text style={styles.tab}>Hot</Text></Pressable></View>
+    <Pressable onPress={onCreate} style={styles.storyStrip}><View style={styles.storyAvatarWrap}><Image source={profilePicture} style={styles.storyAvatar} /><View style={styles.plus}><Text style={styles.plusText}>+</Text></View></View><View><Text style={styles.storyTitle}>Short Story</Text><Text style={styles.storyHint}>ဒီနေ့ရဲ့အချိန်လေးကို မျှဝေပါ</Text></View><Text style={styles.storyArrow}>›</Text></Pressable>
+    {posts.map(post => <FeedCard key={post.id} post={post} />)}
+  </ScrollView>;
+}
 
-          <View style={styles.storyImageWrap}>
-            <Image source={{ uri: photo }} style={styles.storyImage} />
-            <View style={styles.imageBadge}>
-              <Text style={styles.imageBadgeText}>📷 MeeNyo</Text>
-            </View>
-          </View>
+function FeedCard({ post }: { post: typeof posts[number] }) {
+  return <View style={styles.postCard}><Image source={post.image} style={styles.postImage} /><View style={styles.postGradient} /><View style={styles.postTop}><View style={styles.userRow}><Image source={profilePicture} style={styles.miniAvatar} /><View><Text style={styles.userName}>{post.user}</Text><Text style={styles.handle}>{post.handle}</Text></View></View><Text style={styles.more}>•••</Text></View><View style={styles.postBottom}><Text style={styles.postTitle}>{post.title}</Text><Text style={styles.postSubtitle}>{post.subtitle}</Text><Text style={styles.hashtag}>✦ MeeNyo Challenge</Text></View><View style={styles.actions}><Text style={styles.action}>♡ <Text style={styles.actionNumber}>{post.likes}</Text></Text><Text style={styles.action}>◌ <Text style={styles.actionNumber}>{post.comments}</Text></Text><Text style={styles.action}>↗</Text></View></View>;
+}
 
-          <Text style={styles.editorLabel}>ဒီအချိန်လေးကို ဘာပြောချင်လဲ?</Text>
-          <TextInput
-            value={storyText}
-            onChangeText={setStoryText}
-            placeholder="ကိုယ့်ရဲ့ Short Story လေးရေးပါ…"
-            placeholderTextColor="#888"
-            multiline
-            maxLength={500}
-            style={styles.storyInput}
-            textAlignVertical="top"
-          />
-          <Text style={styles.counter}>{storyText.length}/500</Text>
+function ChallengesScreen({ onCreate }: { onCreate: () => void }) {
+  return <ScrollView style={styles.content} contentContainerStyle={styles.contentBottom} showsVerticalScrollIndicator={false}><View style={styles.header}><View><Text style={styles.pageTitle}>Trending Challenges</Text><Text style={styles.pageSub}>မြန်မာနိုင်ငံရဲ့ ရေပန်းစားနေတဲ့ Challenge များ</Text></View><Text style={styles.goldIcon}>✦</Text></View><ChallengeCard title="Rocket Challenges" prize="Win 500,000 Ks" emoji="🚀" /><ChallengeCard title="Ice Dance Contest" prize="Join Now" emoji="💃" /><ChallengeCard title="Traditional Dance" prize="Join Now" emoji="✨" /><Pressable style={styles.bigCreate} onPress={onCreate}><Text style={styles.bigCreateText}>▶  Create Your Story</Text></Pressable></ScrollView>;
+}
+function ChallengeCard({ title, prize, emoji }: { title: string; prize: string; emoji: string }) { return <Pressable style={styles.challenge}><View style={styles.challengeIcon}><Text style={{ fontSize: 35 }}>{emoji}</Text></View><View style={{ flex: 1 }}><Text style={styles.challengeTitle}>{title}</Text><Text style={styles.challengePrize}>{prize}</Text></View><Text style={styles.join}>Join</Text></Pressable>; }
 
-          <View style={styles.tipCard}>
-            <Text style={styles.tipTitle}>💡 Short Story</Text>
-            <Text style={styles.tipText}>ပုံလေးနဲ့အတူ ကိုယ့်ရဲ့ အမှတ်တရ၊ ခံစားချက် ဒါမှမဟုတ် ဒီနေ့အကြောင်းလေး မျှဝေပါ။</Text>
-          </View>
+function ProfileScreen({ onCreate }: { onCreate: () => void }) {
+  return <ScrollView style={styles.content} contentContainerStyle={styles.contentBottom} showsVerticalScrollIndicator={false}><View style={styles.profileHero}><Image source={profilePicture} style={styles.profileCover} /><View style={styles.profileShade} /><View style={styles.profileInfo}><Image source={profilePicture} style={styles.profileAvatar} /><Text style={styles.profileName}>Ko Aung</Text><Text style={styles.profileHandle}>@koaung</Text></View></View><View style={styles.stats}><Stat value="250" label="Following" /><Stat value="18.2K" label="Followers" /><Stat value="122.5K" label="Likes" /></View><View style={styles.profileButtons}><Pressable style={styles.edit}><Text style={styles.editText}>Edit Profile</Text></Pressable><Pressable style={styles.fund}><Text style={styles.fundText}>● Creators Fund</Text></Pressable></View><Text style={styles.sectionTitle}>My Stories</Text><View style={styles.grid}>{posts.concat(posts).map((p, i) => <Image key={i} source={p.image} style={styles.gridImage} />)}</View><Pressable onPress={onCreate} style={styles.bigCreate}><Text style={styles.bigCreateText}>＋  Create Short Story</Text></Pressable></ScrollView>;
+}
+function Stat({ value, label }: { value: string; label: string }) { return <View style={styles.stat}><Text style={styles.statValue}>{value}</Text><Text style={styles.statLabel}>{label}</Text></View>; }
 
-          <Pressable
-            style={[styles.publishButton, !storyText.trim() && styles.publishDisabled]}
-            disabled={!storyText.trim()}
-            onPress={() => setPublished(true)}
-          >
-            <Text style={styles.publishButtonText}>✨ Story တင်မည်</Text>
-          </Pressable>
+function BottomNav({ active, onHome, onChallenges, onCreate, onProfile }: { active: string; onHome: () => void; onChallenges: () => void; onCreate: () => void; onProfile: () => void }) {
+  return <View style={styles.nav}><Pressable onPress={onHome} style={styles.navItem}><Text style={[styles.navIcon, active === 'home' && styles.navActive]}>⌂</Text><Text style={[styles.navLabel, active === 'home' && styles.navActive]}>Home</Text></Pressable><Pressable onPress={onChallenges} style={styles.navItem}><Text style={[styles.navIcon, active === 'challenges' && styles.navActive]}>♡</Text><Text style={[styles.navLabel, active === 'challenges' && styles.navActive]}>Hot</Text></Pressable><Pressable onPress={onCreate} style={styles.createButton}><Text style={styles.createPlus}>＋</Text></Pressable><Pressable onPress={onCreate} style={styles.navItem}><Text style={styles.navIcon}>▣</Text><Text style={styles.navLabel}>Story</Text></Pressable><Pressable onPress={onProfile} style={styles.navItem}><Text style={[styles.navIcon, active === 'profile' && styles.navActive]}>♙</Text><Text style={[styles.navLabel, active === 'profile' && styles.navActive]}>Profile</Text></Pressable></View>;
+}
 
-          <Text style={styles.privacy}>🔒 Privacy First • MeeNyo</Text>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    );
-  }
+type CameraProps = { permission: any; requestPermission: () => void; facing: 'back' | 'front'; setFacing: (v: 'back' | 'front') => void; photo: string | null; setPhoto: (v: string | null) => void; storyMode: boolean; setStoryMode: (v: boolean) => void; storyText: string; setStoryText: (v: string) => void; published: boolean; setPublished: (v: boolean) => void; cameraRef: React.RefObject<CameraView | null>; onClose: () => void; };
 
-  if (photo) {
-    return (
-      <View style={styles.cameraContainer}>
-        <StatusBar style="light" />
-        <Image source={{ uri: photo }} style={styles.absoluteFill} />
-        <View style={styles.previewTop}>
-          <Text style={styles.logo}>MeeNyo</Text>
-          <Text style={styles.mm}>မီးညို</Text>
-        </View>
-        <View style={styles.previewBottom}>
-          <Pressable style={styles.retake} onPress={() => setPhoto(null)}>
-            <Text style={styles.retakeText}>↩ ပြန်ရိုက်မည်</Text>
-          </Pressable>
-          <Pressable style={styles.post} onPress={() => setStoryMode(true)}>
-            <Text style={styles.postText}>Shot Story တင်မည်</Text>
-          </Pressable>
-        </View>
-      </View>
-    );
-  }
-
-  const takePhoto = async () => {
-    try {
-      if (!cameraRef.current) return;
-      const result = await cameraRef.current.takePictureAsync();
-      if (result?.uri) setPhoto(result.uri);
-    } catch (error) {
-      console.log('Camera error:', error);
-    }
-  };
-
-  return (
-    <View style={styles.cameraContainer}>
-      <StatusBar style="light" />
-      <CameraView ref={cameraRef} style={styles.absoluteFill} facing={facing} mode="picture" />
-      <View style={styles.overlay} />
-      <View style={styles.logoBox}>
-        <Text style={styles.logo}>MeeNyo</Text>
-        <Text style={styles.mm}>မီးညို</Text>
-        <Text style={styles.tagline}>ချစ်စရာကမ္ဘာလေးထဲက ကိုယ်ပိုင်အချိန်</Text>
-      </View>
-      <View style={styles.bottom}>
-        <Pressable style={styles.smallButton} onPress={() => setFacing(current => current === 'back' ? 'front' : 'back')}>
-          <Text style={styles.smallText}>↻</Text>
-        </Pressable>
-        <Pressable style={styles.capture} onPress={takePhoto}>
-          <View style={styles.captureInner} />
-        </Pressable>
-        <Pressable style={styles.smallButton}>
-          <Text style={styles.smallText}>♡</Text>
-        </Pressable>
-      </View>
-      <Text style={styles.footer}>Privacy First • MeeNyo</Text>
-    </View>
-  );
+function CameraFlow(p: CameraProps) {
+  if (!p.permission) return <View style={styles.cameraCenter}><ActivityIndicator color={COLORS.gold} size="large" /></View>;
+  if (!p.permission.granted) return <View style={styles.cameraCenter}><Text style={styles.cameraTitle}>MeeNyo Camera</Text><Text style={styles.cameraText}>Story တင်ဖို့ Camera permission လိုအပ်ပါတယ်။</Text><Pressable style={styles.goldButton} onPress={p.requestPermission}><Text style={styles.goldButtonText}>Camera ဖွင့်မည်</Text></Pressable><Pressable onPress={p.onClose}><Text style={styles.backText}>‹ ပြန်</Text></Pressable></View>;
+  if (p.published && p.photo) return <View style={styles.cameraFull}><Image source={{ uri: p.photo }} style={styles.absolute} /><View style={styles.successOverlay}><View style={styles.successCard}><Text style={styles.successCheck}>✓</Text><Text style={styles.successTitle}>Story တင်ပြီးပါပြီ</Text><Text style={styles.cameraText}>သင့်ရဲ့ Short Story ကို MeeNyo မှာ သိမ်းထားပါပြီ။</Text><Pressable style={styles.goldButton} onPress={p.onClose}><Text style={styles.goldButtonText}>Home ပြန်သွားမည်</Text></Pressable></View></View></View>;
+  if (p.storyMode && p.photo) return <KeyboardAvoidingView style={styles.editor} behavior={Platform.OS === 'ios' ? 'padding' : undefined}><ScrollView contentContainerStyle={styles.editorInner}><View style={styles.editorHeader}><Pressable onPress={() => p.setStoryMode(false)}><Text style={styles.backText}>‹ ပြန်</Text></Pressable><Text style={styles.editorTitle}>Edit Short Story</Text><View style={{ width: 45 }} /></View><Image source={{ uri: p.photo }} style={styles.storyPreview} /><Text style={styles.inputLabel}>ဒီအချိန်လေးကို ဘာပြောချင်လဲ?</Text><TextInput value={p.storyText} onChangeText={p.setStoryText} placeholder="ကိုယ့်ရဲ့ Short Story လေးရေးပါ…" placeholderTextColor="#9D8C7C" multiline maxLength={500} style={styles.input} /><Text style={styles.counter}>{p.storyText.length}/500</Text><Pressable disabled={!p.storyText.trim()} style={[styles.goldButton, !p.storyText.trim() && { opacity: 0.4 }]} onPress={() => p.setPublished(true)}><Text style={styles.goldButtonText}>✨ Story တင်မည်</Text></Pressable></ScrollView></KeyboardAvoidingView>;
+  if (p.photo) return <View style={styles.cameraFull}><Image source={{ uri: p.photo }} style={styles.absolute} /><View style={styles.cameraTop}><Text style={styles.brand}>MeeNyo</Text><Pressable onPress={p.onClose}><Text style={styles.close}>×</Text></Pressable></View><View style={styles.cameraBottom}><Pressable style={styles.darkPill} onPress={() => p.setPhoto(null)}><Text style={styles.pillText}>↩ ပြန်ရိုက်</Text></Pressable><Pressable style={styles.goldButton} onPress={() => p.setStoryMode(true)}><Text style={styles.goldButtonText}>Shot Story တင်မည်</Text></Pressable></View></View>;
+  const takePhoto = async () => { if (!p.cameraRef.current) return; const result = await p.cameraRef.current.takePictureAsync(); if (result?.uri) p.setPhoto(result.uri); };
+  return <View style={styles.cameraFull}><CameraView ref={p.cameraRef} style={styles.absolute} facing={p.facing} mode="picture" /><View style={styles.cameraTop}><View><Text style={styles.brand}>MeeNyo</Text><Text style={styles.brandMm}>မီးညို</Text></View><Pressable onPress={p.onClose}><Text style={styles.close}>×</Text></Pressable></View><View style={styles.cameraBottom}><Pressable style={styles.roundTool} onPress={() => p.setFacing(p.facing === 'back' ? 'front' : 'back')}><Text style={styles.toolText}>↻</Text></Pressable><Pressable style={styles.capture} onPress={takePhoto}><View style={styles.captureInner} /></Pressable><View style={styles.roundTool}><Text style={styles.toolText}>♡</Text></View></View><Text style={styles.cameraFooter}>Privacy First • MeeNyo</Text></View>;
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1a1a2e', alignItems: 'center', justifyContent: 'center', padding: 24 },
-  cameraContainer: { flex: 1, backgroundColor: '#1a1a2e' },
-  editorContainer: { flex: 1, backgroundColor: '#12121f' },
-  absoluteFill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.18)' },
-  logoBox: { position: 'absolute', top: 65, width: '100%', alignItems: 'center' },
-  logo: { color: '#f9a826', fontSize: 46, fontWeight: '800' },
-  mm: { color: '#fff', fontSize: 28, fontWeight: '700', marginTop: 4 },
-  tagline: { color: '#ddd', fontSize: 14, marginTop: 12, textAlign: 'center' },
-  loader: { marginTop: 28 },
-  button: { backgroundColor: '#f9a826', paddingVertical: 16, paddingHorizontal: 35, borderRadius: 30, marginTop: 35 },
-  buttonText: { color: '#000', fontSize: 17, fontWeight: '700' },
-  bottom: { position: 'absolute', bottom: 65, left: 30, right: 30, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  capture: { width: 78, height: 78, borderRadius: 39, borderWidth: 5, borderColor: '#fff', alignItems: 'center', justifyContent: 'center' },
-  captureInner: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#f9a826' },
-  smallButton: { width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center' },
-  smallText: { color: '#fff', fontSize: 28 },
-  footer: { position: 'absolute', bottom: 20, alignSelf: 'center', color: '#ddd', fontSize: 12 },
-  previewTop: { position: 'absolute', top: 55, width: '100%', alignItems: 'center' },
-  previewBottom: { position: 'absolute', bottom: 45, width: '100%', alignItems: 'center', gap: 14 },
-  retake: { backgroundColor: 'rgba(0,0,0,0.6)', paddingVertical: 13, paddingHorizontal: 28, borderRadius: 25 },
-  retakeText: { color: '#fff', fontSize: 15, fontWeight: '600' },
-  post: { backgroundColor: '#f9a826', paddingVertical: 16, paddingHorizontal: 35, borderRadius: 28 },
-  postText: { color: '#000', fontSize: 16, fontWeight: '700' },
-  editorContent: { padding: 20, paddingBottom: 45 },
-  editorHeader: { height: 55, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  editorTitle: { color: '#fff', fontSize: 22, fontWeight: '800' },
-  headerButton: { paddingVertical: 10, paddingRight: 20 },
-  headerButtonText: { color: '#f9a826', fontSize: 17, fontWeight: '700' },
-  headerSpacer: { width: 55 },
-  storyImageWrap: { height: 330, borderRadius: 22, overflow: 'hidden', backgroundColor: '#22223a', marginTop: 8 },
-  storyImage: { width: '100%', height: '100%', resizeMode: 'cover' },
-  imageBadge: { position: 'absolute', left: 14, bottom: 14, backgroundColor: 'rgba(0,0,0,0.55)', paddingVertical: 7, paddingHorizontal: 12, borderRadius: 16 },
-  imageBadgeText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-  editorLabel: { color: '#fff', fontSize: 17, fontWeight: '700', marginTop: 22, marginBottom: 10 },
-  storyInput: { minHeight: 130, borderWidth: 1, borderColor: '#3b3b52', borderRadius: 18, backgroundColor: '#1d1d30', color: '#fff', padding: 16, fontSize: 16, lineHeight: 24 },
-  counter: { color: '#777', textAlign: 'right', marginTop: 6, fontSize: 12 },
-  tipCard: { backgroundColor: '#202033', borderRadius: 16, padding: 15, marginTop: 18 },
-  tipTitle: { color: '#f9a826', fontSize: 15, fontWeight: '700', marginBottom: 6 },
-  tipText: { color: '#bbb', fontSize: 13, lineHeight: 20 },
-  publishButton: { backgroundColor: '#f9a826', borderRadius: 28, paddingVertical: 17, alignItems: 'center', marginTop: 22 },
-  publishDisabled: { opacity: 0.45 },
-  publishButtonText: { color: '#000', fontSize: 17, fontWeight: '800' },
-  privacy: { color: '#777', textAlign: 'center', marginTop: 18, fontSize: 12 },
-  publishedOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.58)', alignItems: 'center', justifyContent: 'center', padding: 25 },
-  successCard: { width: '100%', backgroundColor: '#1d1d30', borderRadius: 24, padding: 25, alignItems: 'center' },
-  successIcon: { width: 58, height: 58, borderRadius: 29, backgroundColor: '#f9a826', color: '#000', fontSize: 36, fontWeight: '800', textAlign: 'center', lineHeight: 58 },
-  successTitle: { color: '#fff', fontSize: 22, fontWeight: '800', marginTop: 16 },
-  successText: { color: '#bbb', fontSize: 14, textAlign: 'center', lineHeight: 21, marginTop: 9 },
+  app: { flex: 1, backgroundColor: COLORS.black }, content: { flex: 1, backgroundColor: COLORS.black }, contentBottom: { padding: 16, paddingBottom: 100 },
+  splash: { flex: 1, backgroundColor: COLORS.black, justifyContent: 'center', alignItems: 'center' }, splashImage: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%', resizeMode: 'cover', opacity: 0.55 }, splashShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(45,4,2,0.62)' }, splashContent: { alignItems: 'center' }, splashIcon: { width: 92, height: 92, borderRadius: 24, marginBottom: 15 }, splashBrand: { color: COLORS.gold, fontSize: 43, fontWeight: '900' }, splashMyanmar: { color: COLORS.white, fontSize: 25, fontWeight: '800', marginTop: 2 }, splashTagline: { color: COLORS.goldSoft, marginTop: 8, fontSize: 13 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, paddingBottom: 10 }, brandRow: { flexDirection: 'row', alignItems: 'center', gap: 9 }, headerIcon: { width: 39, height: 39, borderRadius: 12 }, brand: { color: COLORS.gold, fontSize: 23, fontWeight: '900' }, brandMm: { color: COLORS.white, fontSize: 11, fontWeight: '700', marginTop: -2 }, search: { color: COLORS.white, fontSize: 31 },
+  tabs: { flexDirection: 'row', gap: 9, marginBottom: 12 }, tab: { color: COLORS.muted, backgroundColor: COLORS.surface2, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 18, fontWeight: '700' }, tabActive: { color: COLORS.white, backgroundColor: COLORS.red },
+  storyStrip: { backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.line, borderRadius: 16, padding: 11, flexDirection: 'row', alignItems: 'center', gap: 11, marginBottom: 14 }, storyAvatarWrap: { position: 'relative' }, storyAvatar: { width: 48, height: 48, borderRadius: 24, borderWidth: 2, borderColor: COLORS.gold }, plus: { position: 'absolute', right: -2, bottom: -2, backgroundColor: COLORS.red, width: 19, height: 19, borderRadius: 10, alignItems: 'center' }, plusText: { color: COLORS.white, fontWeight: '900' }, storyTitle: { color: COLORS.white, fontWeight: '900', fontSize: 15 }, storyHint: { color: COLORS.muted, fontSize: 12, marginTop: 2 }, storyArrow: { marginLeft: 'auto', color: COLORS.gold, fontSize: 30 },
+  postCard: { height: 520, borderRadius: 18, overflow: 'hidden', marginBottom: 16, backgroundColor: COLORS.surface, position: 'relative' }, postImage: { width: '100%', height: '100%', resizeMode: 'cover' }, postGradient: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(45,5,2,0.18)' }, postTop: { position: 'absolute', top: 13, left: 13, right: 13, flexDirection: 'row', justifyContent: 'space-between' }, userRow: { flexDirection: 'row', gap: 8, alignItems: 'center' }, miniAvatar: { width: 39, height: 39, borderRadius: 20, borderWidth: 2, borderColor: COLORS.gold }, userName: { color: COLORS.white, fontWeight: '900' }, handle: { color: COLORS.goldSoft, fontSize: 11 }, more: { color: COLORS.white, fontWeight: '900', fontSize: 18 }, postBottom: { position: 'absolute', left: 15, bottom: 22 }, postTitle: { color: COLORS.white, fontSize: 21, fontWeight: '900' }, postSubtitle: { color: COLORS.goldSoft, fontSize: 16, fontWeight: '700', marginTop: 3 }, hashtag: { color: COLORS.white, marginTop: 8, fontSize: 12 }, actions: { position: 'absolute', right: 12, bottom: 22, gap: 14, alignItems: 'center' }, action: { color: COLORS.white, fontSize: 20, fontWeight: '800' }, actionNumber: { color: COLORS.white, fontSize: 11 },
+  pageTitle: { color: COLORS.white, fontSize: 25, fontWeight: '900' }, pageSub: { color: COLORS.muted, fontSize: 12, marginTop: 4 }, goldIcon: { color: COLORS.gold, fontSize: 30 }, challenge: { backgroundColor: COLORS.surface, borderRadius: 16, borderWidth: 1, borderColor: COLORS.line, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }, challengeIcon: { width: 67, height: 67, borderRadius: 14, backgroundColor: COLORS.redDeep, alignItems: 'center', justifyContent: 'center' }, challengeTitle: { color: COLORS.white, fontSize: 17, fontWeight: '900' }, challengePrize: { color: COLORS.gold, marginTop: 5, fontWeight: '800' }, join: { backgroundColor: COLORS.red, color: COLORS.white, paddingHorizontal: 15, paddingVertical: 8, borderRadius: 15, overflow: 'hidden', fontWeight: '900' },
+  profileHero: { height: 305, borderRadius: 20, overflow: 'hidden', position: 'relative', backgroundColor: COLORS.surface }, profileCover: { width: '100%', height: '100%', resizeMode: 'cover' }, profileShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(55,5,2,0.45)' }, profileInfo: { position: 'absolute', bottom: 18, left: 18 }, profileAvatar: { width: 84, height: 84, borderRadius: 42, borderWidth: 3, borderColor: COLORS.gold, marginBottom: 8 }, profileName: { color: COLORS.white, fontSize: 25, fontWeight: '900' }, profileHandle: { color: COLORS.goldSoft, marginTop: 2 }, stats: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 17, backgroundColor: COLORS.surface, borderRadius: 15, marginTop: 10 }, stat: { alignItems: 'center' }, statValue: { color: COLORS.white, fontSize: 18, fontWeight: '900' }, statLabel: { color: COLORS.muted, fontSize: 11, marginTop: 3 }, profileButtons: { flexDirection: 'row', gap: 9, marginTop: 10 }, edit: { flex: 1, backgroundColor: COLORS.red, borderRadius: 12, paddingVertical: 12, alignItems: 'center' }, editText: { color: COLORS.white, fontWeight: '900' }, fund: { flex: 1, backgroundColor: COLORS.surface2, borderRadius: 12, paddingVertical: 12, alignItems: 'center' }, fundText: { color: COLORS.gold, fontWeight: '800' }, sectionTitle: { color: COLORS.white, fontSize: 18, fontWeight: '900', marginTop: 20, marginBottom: 10 }, grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 }, gridImage: { width: '32.3%', aspectRatio: 4 / 5, borderRadius: 8 },
+  nav: { position: 'absolute', left: 10, right: 10, bottom: 9, height: 66, borderRadius: 22, backgroundColor: 'rgba(20,10,9,0.97)', borderWidth: 1, borderColor: COLORS.line, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around' }, navItem: { alignItems: 'center', minWidth: 54 }, navIcon: { color: COLORS.muted, fontSize: 22 }, navLabel: { color: COLORS.muted, fontSize: 9, marginTop: 2, fontWeight: '700' }, navActive: { color: COLORS.gold }, createButton: { width: 54, height: 54, borderRadius: 27, backgroundColor: COLORS.red, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: COLORS.gold }, createPlus: { color: COLORS.white, fontSize: 28 }, bigCreate: { backgroundColor: COLORS.red, borderRadius: 18, alignItems: 'center', paddingVertical: 15, marginTop: 18 }, bigCreateText: { color: COLORS.white, fontWeight: '900', fontSize: 16 },
+  cameraFull: { flex: 1, backgroundColor: COLORS.black }, absolute: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%', resizeMode: 'cover' }, cameraTop: { position: 'absolute', top: 55, left: 18, right: 18, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, close: { color: COLORS.white, fontSize: 36 }, cameraBottom: { position: 'absolute', bottom: 55, left: 22, right: 22, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, roundTool: { width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' }, toolText: { color: COLORS.white, fontSize: 26 }, capture: { width: 78, height: 78, borderRadius: 39, borderWidth: 5, borderColor: COLORS.white, alignItems: 'center', justifyContent: 'center' }, captureInner: { width: 62, height: 62, borderRadius: 31, backgroundColor: COLORS.red }, cameraFooter: { position: 'absolute', bottom: 18, alignSelf: 'center', color: COLORS.white, fontSize: 11 }, cameraCenter: { flex: 1, backgroundColor: COLORS.black, alignItems: 'center', justifyContent: 'center', padding: 25 }, cameraTitle: { color: COLORS.gold, fontSize: 27, fontWeight: '900' }, cameraText: { color: COLORS.muted, textAlign: 'center', marginTop: 10, lineHeight: 21 }, goldButton: { backgroundColor: COLORS.gold, borderRadius: 25, paddingVertical: 14, paddingHorizontal: 25, alignItems: 'center', marginTop: 20 }, goldButtonText: { color: COLORS.black, fontWeight: '900', fontSize: 15 }, backText: { color: COLORS.gold, fontSize: 16, fontWeight: '800', marginTop: 20 }, darkPill: { backgroundColor: 'rgba(0,0,0,0.65)', paddingVertical: 14, paddingHorizontal: 22, borderRadius: 25 }, pillText: { color: COLORS.white, fontWeight: '800' },
+  editor: { flex: 1, backgroundColor: COLORS.black }, editorInner: { padding: 18, paddingBottom: 40 }, editorHeader: { height: 55, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, editorTitle: { color: COLORS.white, fontSize: 21, fontWeight: '900' }, storyPreview: { width: '100%', aspectRatio: 4 / 5, borderRadius: 18, resizeMode: 'cover' }, inputLabel: { color: COLORS.white, fontWeight: '900', fontSize: 16, marginTop: 18, marginBottom: 9 }, input: { minHeight: 125, borderRadius: 16, borderWidth: 1, borderColor: COLORS.line, backgroundColor: COLORS.surface, color: COLORS.white, padding: 15, fontSize: 15, lineHeight: 23 }, counter: { color: COLORS.muted, textAlign: 'right', fontSize: 11, marginTop: 5 }, successOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', alignItems: 'center', padding: 22 }, successCard: { width: '100%', backgroundColor: COLORS.surface, borderRadius: 22, padding: 24, alignItems: 'center', borderWidth: 1, borderColor: COLORS.line }, successCheck: { width: 58, height: 58, borderRadius: 29, backgroundColor: COLORS.gold, color: COLORS.black, textAlign: 'center', lineHeight: 58, fontSize: 34, fontWeight: '900' }, successTitle: { color: COLORS.white, fontSize: 22, fontWeight: '900', marginTop: 14 },
 });
